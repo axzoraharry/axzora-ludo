@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0e14">
+    <title>Axzora Ludo</title>
+    <style>
+        :root {
+            --bg: #0b0e14;
+            --panel: #141922;
+            --line: #232b39;
+            --ink: #e8eef7;
+            --dim: #8b9bb4;
+            --red: #ff5a5f;
+            --green: #37d67a;
+            --yellow: #ffc93c;
+            --blue: #4aa8ff;
+            --accent: #ffc93c;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(1200px 600px at 50% -10%, #17202f, var(--bg) 60%);
+            color: var(--ink);
+            font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 12px 28px;
+        }
+
+        h1 {
+            font-size: 17px;
+            letter-spacing: .3px;
+            margin: 4px 0 0;
+            font-weight: 650;
+        }
+
+        h1 span {
+            color: var(--accent);
+        }
+
+        .card {
+            width: 100%;
+            max-width: 520px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 14px;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        input {
+            flex: 1 1 120px;
+            min-width: 0;
+            background: #0e131b;
+            border: 1px solid var(--line);
+            color: var(--ink);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font: inherit;
+        }
+
+        button {
+            background: #1d2531;
+            color: var(--ink);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #1a1200;
+        }
+
+        button:disabled {
+            opacity: .45;
+            cursor: default;
+        }
+
+        #status {
+            font-size: 13px;
+            color: var(--dim);
+            min-height: 18px;
+        }
+
+        #boardWrap {
+            position: relative;
+            width: min(92vw, 460px);
+            aspect-ratio: 1;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border-radius: 16px;
+            background: #0e131b;
+            border: 1px solid var(--line);
+            touch-action: manipulation;
+        }
+
+        #seats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            width: min(92vw, 460px);
+        }
+
+        .seat {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 7px 8px;
+            font-size: 12px;
+            overflow: hidden;
+        }
+
+        .seat.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent) inset;
+        }
+
+        .seat b {
+            display: block;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .seat i {
+            color: var(--dim);
+            font-style: normal;
+        }
+
+        #diceBar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            width: min(92vw, 460px);
+        }
+
+        #die {
+            width: 58px;
+            height: 58px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: #0e131b;
+            display: grid;
+            place-items: center;
+            font-size: 26px;
+            font-weight: 700;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+        #die.hot {
+            border-color: var(--accent);
+            background: #241d00;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            50% {
+                box-shadow: 0 0 0 6px #ffc93c22;
+            }
+        }
+
+        #log {
+            width: min(92vw, 460px);
+            height: 76px;
+            overflow-y: auto;
+            font-size: 12px;
+            color: var(--dim);
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 8px 10px;
+        }
+
+        #log div {
+            white-space: pre-wrap;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Axzora <span>Ludo</span></h1>
+    <div id="status">Connecting…</div>
+
+    <section id="lobby" class="card">
+        <div class="row" style="margin-bottom:8px">
+            <input id="name" placeholder="Your name" maxlength="16" value="Player">
+        </div>
+        <div class="row" style="margin-bottom:8px">
+            <button id="create" class="primary" style="flex:1">Create room</button>
+            <input id="code" placeholder="CODE" maxlength="4" style="flex:0 0 96px; text-transform:uppercase">
+            <button id="join" style="flex:0 0 84px">Join</button>
+        </div>
+        <div class="row">
+            <label style="font-size:13px;color:var(--dim)">Happy Paisa stake</label>
+            <input id="stake" type="number" min="0" step="1" value="0" style="flex:0 0 90px">
+            <button id="start" class="primary" style="flex:1">Start with AI</button>
+        </div>
+    </section>
+
+    <div id="boardWrap" class="hidden"><canvas id="board" width="900" height="900"></canvas></div>
+    <div id="seats" class="hidden"></div>
+    <div id="diceBar" class="hidden">
+        <div id="die">–</div>
+        <div style="font-size:13px;color:var(--dim)" id="hint">Waiting…</div>
+    </div>
+    <div id="log" class="hidden"></div>
+
+    <script>
+        (() => {
+            const COLORS = { r: '#ff5a5f', g: '#37d67a', y: '#ffc93c', b: '#4aa8ff' };
+            const PATH = [
+                [6, 1], [6, 2], [6, 3], [6, 4], [6, 5], [5, 6], [4, 6], [3, 6], [2, 6], [1, 6], [0, 6], [0, 7],
+                [0, 8], [1, 8], [2, 8], [3, 8], [4, 8], [5, 8], [6, 9], [6, 10], [6, 11], [6, 12], [6, 13], [6, 14],
+                [7, 14], [8, 14], [8, 13], [8, 12], [8, 11], [8, 10], [8, 9], [9, 8], [10, 8], [11, 8], [12, 8],
+                [13, 8], [14, 8], [14, 7], [14, 6], [13, 6], [12, 6], [11, 6], [10, 6], [9, 6], [8, 5], [8, 4],
+                [8, 3], [8, 2], [8, 1], [8, 0], [7, 0], [6, 0]
+            ];
+            const SAFE = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
+            const ENTRY = [0, 13, 26, 39];
+            const HOME_COL = [
+                [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5]],
+                [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7]],
+                [[7, 13], [7, 12], [7, 11], [7, 10], [7, 9]],
+                [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7]]
+            ];
+            const YARD = [[0.7, 9.7], [0.7, 0.7], [9.7, 0.7], [9.7, 9.7]];
+            const SLOTS = [[0, 0], [2.1, 0], [0, 2.1], [2.1, 2.1]];
+            const HOME_PROG = 56;
+
+            const $ = (id) => document.getElementById(id);
+            const canvas = $('board');
+            const ctx = canvas.getContext('2d');
+            const CELL = canvas.width / 15;
+
+            let ws = null;
+            let state = null;
+            let mySeat = -1;
+            let roomCode = '';
+            let reconnectDelay = 500;
+
+            const setStatus = (text, bad) => {
+                $('status').textContent = text;
+                $('status').style.color = bad ? 'var(--red)' : '';
+            };
+
+            const log = (text) => {
+                const el = document.createElement('div');
+                el.textContent = text;
+                $('log').prepend(el);
+                while ($('log').children.length > 60) $('log').lastChild.remove();
+            };
+
+            // ---- rendering -------------------------------------------------
+            const cellColor = (r, c) =>
+                (r < 6 && c < 6) ? 'g' : (r < 6 && c > 8) ? 'y' : (r > 8 && c < 6) ? 'r' : (r > 8 && c > 8) ? 'b' : null;
+
+            function drawBoard() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Grid
+                ctx.strokeStyle = '#1b2330';
+                ctx.lineWidth = 1;
+                for (let i = 0; i <= 15; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, canvas.height); ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * CELL); ctx.lineTo(canvas.width, i * CELL); ctx.stroke();
+                }
+
+                // Yards
+                for (let seat = 0; seat < 4; seat++) {
+                    const [ox, oy] = YARD[seat];
+                    const name = ['r', 'g', 'y', 'b'][seat];
+                    ctx.fillStyle = COLORS[name] + '18';
+                    ctx.strokeStyle = COLORS[name] + '66';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(ox * CELL, oy * CELL, 4.6 * CELL, 4.6 * CELL, 14);
+                    ctx.fill(); ctx.stroke();
+                }
+
+                // Path cells
+                PATH.forEach(([r, c], idx) => {
+                    const safe = SAFE.has(idx);
+                    ctx.fillStyle = safe ? '#1d2b24' : '#131a24';
+                    ctx.strokeStyle = safe ? '#37d67a88' : '#20293a';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.roundRect(c * CELL + 1.5, r * CELL + 1.5, CELL - 3, CELL - 3, 5);
+                    ctx.fill(); ctx.stroke();
+                });
+
+                // Home columns
+                for (let seat = 0; seat < 4; seat++) {
+                    const name = ['r', 'g', 'y', 'b'][seat];
+                    HOME_COL[seat].forEach(([r, c]) => {
+                        ctx.fillStyle = COLORS[name] + '33';
+                        ctx.strokeStyle = COLORS[name] + '55';
+                        ctx.beginPath();
+                        ctx.roundRect(c * CELL + 2, r * CELL + 2, CELL - 4, CELL - 4, 5);
+                        ctx.fill(); ctx.stroke();
+                    });
+                }
+
+                // Centre
+                ctx.fillStyle = '#101722';
+                ctx.strokeStyle = '#2b3547';
+                ctx.beginPath();
+                ctx.roundRect(6 * CELL + 2, 6 * CELL + 2, 3 * CELL - 4, 3 * CELL - 4, 12);
+                ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#4a5a72';
+                ctx.font = `600 ${CELL * 0.42}px system-ui, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('HP', 7.5 * CELL, 7.5 * CELL);
+            }
+
+            function tokenPos(seat, prog) {
+                if (prog < 0) {
+                    const [ox, oy] = YARD[seat];
+                    return null;
+                }
+                if (prog >= HOME_PROG) {
+                    const col = HOME_COL[seat][4];
+                    return [col[1] + 0.5, col[0] + 0.5];
+                }
+                if (prog > 50) {
+                    const col = HOME_COL[seat][Math.min(4, prog - 52)];
+                    return [col[1] + 0.5, col[0] + 0.5];
+                }
+                const [r, c] = PATH[(ENTRY[seat] + prog) % 52];
+                return [c + 0.5, r + 0.5];
+            }
+
+            function tokenCell(seat, tokenIndex, prog) {
+                if (prog >= 0) {
+                    const pos = tokenPos(seat, prog);
+                    return [pos[0] * CELL, pos[1] * CELL];
+                }
+                const [ox, oy] = YARD[seat];
+                const [sx, sy] = SLOTS[tokenIndex];
+                return [(ox + 1 + sx) * CELL, (oy + 1 + sy) * CELL];
+            }
+
+            function movableTokens() {
+                if (!state || state.phase !== 'await_move' || state.turn !== mySeat) return [];
+                const toks = state.players[mySeat].toks;
+                const out = [];
+                toks.forEach((prog, i) => {
+                    if (prog >= HOME_PROG) return;
+                    if (prog < 0 ? state.dice === 6 : prog + state.dice <= HOME_PROG) out.push(i);
+                });
+                return out;
+            }
+
+            function drawTokens() {
+                if (!state) return;
+                const movable = movableTokens();
+                // Draw stacked tokens with a small offset so overlaps stay visible.
+                const occupied = new Map();
+
+                state.players.forEach((player) => {
+                    const color = COLORS[player.color] || '#fff';
+                    player.toks.forEach((prog, index) => {
+                        const [x, y] = tokenCell(player.seat, index, prog);
+                        const key = Math.round(x) + ',' + Math.round(y);
+                        const stack = occupied.get(key) || 0;
+                        occupied.set(key, stack + 1);
+                        const dx = stack * CELL * 0.16;
+                        const r = CELL * 0.3;
+
+                        ctx.beginPath();
+                        ctx.arc(x + dx, y + dx, r, 0, Math.PI * 2);
+                        ctx.fillStyle = color;
+                        ctx.globalAlpha = player.ai ? 0.55 : 1;
+                        ctx.fill();
+                        ctx.globalAlpha = 1;
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#08111c';
+                        ctx.stroke();
+
+                        if (prog >= HOME_PROG) {
+                            ctx.strokeStyle = '#fff';
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.arc(x + dx, y + dx, r * 0.45, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+                        if (player.seat === mySeat && movable.includes(index)) {
+                            ctx.strokeStyle = '#fff';
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.arc(x + dx, y + dx, r + 4, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+                    });
+                });
+            }
+
+            function paint() {
+                drawBoard();
+                drawTokens();
+
+                if (!state) return;
+                const seats = $('seats');
+                seats.innerHTML = '';
+                state.players.forEach((p) => {
+                    const el = document.createElement('div');
+                    el.className = 'seat' + (state.turn === p.seat && state.phase !== 'over' ? ' active' : '');
+                    const home = p.toks.filter((t) => t >= HOME_PROG).length;
+                    el.innerHTML = '<b></b><i></i>';
+                    el.querySelector('b').textContent = (p.seat === mySeat ? '▸ ' : '') + p.name + (p.ai ? ' (AI)' : '');
+                    el.querySelector('b').style.color = COLORS[p.color];
+                    el.querySelector('i').textContent = home ? home + '/4 home' : 'playing';
+                    seats.appendChild(el);
+                });
+
+                const die = $('die');
+                die.textContent = state.phase === 'await_roll' ? '?' : (state.dice || '–');
+                const hot = state.phase === 'await_roll' && state.turn === mySeat;
+                die.classList.toggle('hot', hot);
+
+                let hint = 'Waiting…';
+                if (state.phase === 'lobby') hint = mySeat === 0 ? 'Share code ' + state.code + ', then press Start with AI' : 'Waiting for the host to start';
+                else if (state.phase === 'await_roll') hint = state.turn === mySeat ? 'Tap the die to roll' : 'Waiting for ' + state.players[state.turn].name;
+                else if (state.phase === 'await_move') hint = state.turn === mySeat ? 'Tap a highlighted token' : 'Waiting for ' + state.players[state.turn].name;
+                else if (state.phase === 'over') hint = 'Winner: ' + (state.players[state.winner] ? state.players[state.winner].name : '—');
+                $('hint').textContent = hint;
+
+                $('lobby').classList.toggle('hidden', state.phase !== 'lobby');
+                ['boardWrap', 'seats', 'diceBar', 'log'].forEach((id) => $(id).classList.remove('hidden'));
+                $('start').disabled = !(state.phase === 'lobby' && mySeat === 0);
+            }
+
+            // ---- networking ------------------------------------------------
+            function connect() {
+                const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+                ws = new WebSocket(proto + '://' + location.host);
+
+                ws.onopen = () => {
+                    reconnectDelay = 500;
+                    setStatus(roomCode ? 'Reconnected — rejoin room ' + roomCode : 'Connected');
+                    if (roomCode) send({ t: 'join', code: roomCode, name: myName() });
+                };
+
+                ws.onmessage = (event) => {
+                    let msg;
+                    try { msg = JSON.parse(event.data); } catch (e) { return; }
+                    if (msg.t === 'state') {
+                        state = msg;
+                        window.__ludoState = msg;   // handy when debugging from the console
+                        paint();
+                    } else if (msg.t === 'joined') {
+                        mySeat = msg.seat;
+                        roomCode = msg.code;
+                        setStatus('Room ' + msg.code + ' — seat ' + (msg.seat + 1));
+                        log('Joined room ' + msg.code);
+                        history.replaceState(null, '', '#' + msg.code);
+                    } else if (msg.t === 'chat') {
+                        log(msg.from + ': ' + msg.text);
+                    } else if (msg.t === 'error') {
+                        log('! ' + msg.msg);
+                        setStatus(msg.msg, true);
+                    }
+                };
+
+                ws.onclose = () => {
+                    setStatus('Disconnected — retrying…', true);
+                    setTimeout(connect, reconnectDelay);
+                    reconnectDelay = Math.min(reconnectDelay * 2, 8000);
+                };
+
+                ws.onerror = () => { };
+            }
+
+            function send(obj) {
+                if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
+            }
+
+            const myName = () => ($('name').value || 'Player').slice(0, 16);
+
+            // ---- interaction -----------------------------------------------
+            $('create').onclick = () => {
+                const stake = Math.max(0, Math.floor(Number($('stake').value) || 0));
+                send({ t: 'create', name: myName(), stake });
+            };
+
+            $('join').onclick = () => {
+                const code = ($('code').value || '').trim().toUpperCase();
+                if (code.length !== 4) return setStatus('Enter the 4-character code', true);
+                send({ t: 'join', code, name: myName() });
+            };
+
+            $('start').onclick = () => send({ t: 'start', fillAI: true });
+
+            $('die').onclick = () => {
+                if (state && state.phase === 'await_roll' && state.turn === mySeat) send({ t: 'roll' });
+            };
+
+            canvas.addEventListener('click', (event) => {
+                if (!state || state.phase !== 'await_move' || state.turn !== mySeat) return;
+                const rect = canvas.getBoundingClientRect();
+                const scale = canvas.width / rect.width;
+                const x = (event.clientX - rect.left) * scale;
+                const y = (event.clientY - rect.top) * scale;
+
+                let best = -1;
+                let bestDistance = Infinity;
+                movableTokens().forEach((index) => {
+                    const [tx, ty] = tokenCell(mySeat, index, state.players[mySeat].toks[index]);
+                    const d = Math.hypot(tx - x, ty - y);
+                    if (d < bestDistance) { bestDistance = d; best = index; }
+                });
+                if (best >= 0 && bestDistance < CELL * 0.9) send({ t: 'move', ti: best });
+            });
+
+            // Deep link: #CODE pre-fills the join box.
+            const hash = (location.hash || '').replace('#', '').toUpperCase();
+            if (hash.length === 4) $('code').value = hash;
+
+            // roundRect is missing on older WebViews.
+            if (!CanvasRenderingContext2D.prototype.roundRect) {
+                CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+                    const radius = Math.min(r, w / 2, h / 2);
+                    this.moveTo(x + radius, y);
+                    this.arcTo(x + w, y, x + w, y + h, radius);
+                    this.arcTo(x + w, y + h, x, y + h, radius);
+                    this.arcTo(x, y + h, x, y, radius);
+                    this.arcTo(x, y, x + w, y, radius);
+                    this.closePath();
+                    return this;
+                };
+            }
+
+            drawBoard();
+            connect();
+        })();
+    </script>
+</body>
+
+</html>

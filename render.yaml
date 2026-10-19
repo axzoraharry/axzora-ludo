@@ -3,9 +3,15 @@ services:
     name: axzora-ludo
     runtime: node
     plan: free
-    buildCommand: npm install
+    region: singapore
+    buildCommand: npm ci --omit=dev
     startCommand: node server.js
     healthCheckPath: /health
+    autoDeploy: true
     envVars:
       - key: NODE_VERSION
         value: "20"
+      - key: MAX_ROOMS
+        value: "500"
+      - key: MAX_CONNECTIONS
+        value: "2000"

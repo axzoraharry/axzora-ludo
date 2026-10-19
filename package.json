@@ -1,10 +1,38 @@
 {
   "name": "axzora-ludo-server",
-  "version": "1.0.0",
-  "description": "Axzora online Ludo — authoritative room server (create/join, real-time sync)",
+  "version": "1.1.0",
+  "description": "Axzora online Ludo — authoritative real-time room server (create/join, real-time sync)",
   "license": "MIT",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "engines": { "node": ">=18" },
-  "dependencies": { "ws": "^8.18.0" }
+  "type": "commonjs",
+  "files": [
+    "server.js",
+    "game.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/*.test.js",
+    "test:watch": "node --test --watch test/*.test.js",
+    "smoke": "node scripts/smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/axzoraharry/axzora-ludo.git"
+  },
+  "keywords": [
+    "ludo",
+    "websocket",
+    "multiplayer",
+    "game-server",
+    "axzora"
+  ],
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
 }
